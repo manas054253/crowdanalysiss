@@ -1,0 +1,1567 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crowd Detection System</title>
+    <!-- Google Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <!-- Font Awesome (for potential icons) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --primary-dark: #2980b9;
+            --secondary-color: #2ecc71;
+            --secondary-dark: #27ae60;
+            --danger-color: #e74c3c;
+            --danger-dark: #c0392b;
+            --warning-color: #f39c12;
+            --warning-dark: #f1c40f;
+            --light-color: #ecf0f1;
+            --dark-color: #2c3e50;
+            --dark-grey: #34495e;
+            --medium-grey: #7f8c8d;
+            --light-grey: #bdc3c7;
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --text-light: #fdfdfd;
+
+            --border-radius: 8px;
+            --card-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            --transition-speed: 0.3s;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1300px;
+            margin: 0 auto;
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        header {
+            background: linear-gradient(90deg, var(--dark-color), var(--dark-grey));
+            color: var(--text-light);
+            padding: 1.2rem 0;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            /* Add space below header */
+        }
+
+        h1 {
+            margin: 0;
+            font-weight: 600;
+            font-size: 1.8rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+        }
+
+        .video-section {
+            grid-column: 1 / -1;
+            /* Span full width initially */
+        }
+
+        @media (min-width: 1024px) {
+            .main-content {
+                grid-template-columns: 2fr 1fr;
+                /* Video takes more space on larger screens */
+            }
+
+            .video-section {
+                grid-column: auto;
+                /* Reset column span */
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--card-shadow);
+            padding: 25px;
+            transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        .video-container {
+            position: relative;
+            overflow: hidden;
+            /* Contain children */
+            min-height: 400px;
+            /* Ensure minimum height */
+            display: flex;
+            /* Center placeholder */
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background-color: var(--dark-grey);
+            /* Dark background for video area */
+        }
+
+        #video-feed,
+        #webcam-preview {
+            display: block;
+            /* Changed from none */
+            width: 100%;
+            max-height: 600px;
+            /* Limit height */
+            height: auto;
+            border-radius: calc(var(--border-radius) / 2);
+            background-color: #000;
+            /* Black background while loading */
+        }
+
+        #video-feed {
+            /* Initially hide the output feed */
+            display: none;
+        }
+
+        #webcam-preview {
+            /* Initially hide the preview unless used */
+            display: none;
+        }
+
+        #placeholder-img {
+            display: flex;
+            /* Keep flex for centering text */
+            width: 100%;
+            height: 100%;
+            /* Take full container height */
+            position: absolute;
+            /* Position over the background */
+            top: 0;
+            left: 0;
+            background-color: rgba(44, 62, 80, 0.8);
+            /* Slightly transparent dark */
+            border-radius: calc(var(--border-radius) / 2);
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: var(--light-grey);
+            font-size: 1.1rem;
+            text-align: center;
+            padding: 20px;
+            transition: opacity var(--transition-speed) ease;
+        }
+
+        #placeholder-img.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #placeholder-img i {
+            /* Style for potential icon */
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--primary-color);
+        }
+
+        .controls,
+        .stats {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h3,
+        h4 {
+            color: var(--dark-color);
+            margin-bottom: 15px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 8px;
+        }
+
+        h4 {
+            font-size: 1.1rem;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid var(--light-grey);
+            padding-bottom: 5px;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: var(--text-light);
+            border: none;
+            padding: 12px 18px;
+            border-radius: calc(var(--border-radius) / 1.5);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background-color var(--transition-speed) ease, transform var(--transition-speed) ease;
+            display: inline-flex;
+            /* Align icon and text */
+            align-items: center;
+            gap: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background-color: var(--medium-grey);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        #stop-btn {
+            background-color: var(--danger-color);
+        }
+
+        #stop-btn:hover:not(:disabled) {
+            background-color: var(--danger-dark);
+        }
+
+        #update-threshold-btn {
+            background-color: var(--secondary-color);
+        }
+
+        #update-threshold-btn:hover:not(:disabled) {
+            background-color: var(--secondary-dark);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark-grey);
+        }
+
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--light-grey);
+            border-radius: calc(var(--border-radius) / 1.5);
+            margin-bottom: 15px;
+            font-size: 1rem;
+            transition: border-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+        }
+
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            margin-right: 10px;
+            vertical-align: middle;
+            transition: background-color var(--transition-speed) ease;
+        }
+
+        .status-active {
+            background-color: var(--secondary-color);
+            animation: pulse 2s infinite;
+        }
+
+        .status-inactive {
+            background-color: var(--danger-color);
+        }
+
+        .status-alert {
+            background-color: var(--warning-color);
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(46, 204, 113, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);
+            }
+        }
+
+        .stats-item {
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--bg-color);
+        }
+
+        .stats-item:last-child {
+            border-bottom: none;
+        }
+
+        .stats-label {
+            color: var(--medium-grey);
+            font-weight: 500;
+        }
+
+        .stats-value {
+            font-weight: 600;
+            color: var(--dark-color);
+            display: flex;
+            /* For status indicators inside */
+            align-items: center;
+        }
+
+        .alert-banner {
+            background-color: var(--danger-color);
+            color: var(--text-light);
+            padding: 15px 20px;
+            text-align: center;
+            border-radius: var(--border-radius);
+            margin-bottom: 20px;
+            font-weight: 600;
+            display: none;
+            /* Hidden by default */
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: opacity var(--transition-speed) ease, transform var(--transition-speed) ease;
+        }
+
+        .alert-banner.visible {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .alert-flash {
+            animation: flash 1.5s infinite;
+        }
+
+        @keyframes flash {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(44, 62, 80, 0.85);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: calc(var(--border-radius) / 2);
+            opacity: 0;
+            visibility: hidden;
+            /* Use visibility for better transition */
+            transition: opacity var(--transition-speed) ease, visibility var(--transition-speed) ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .video-overlay.active {
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+
+        /* Modern CSS Loader */
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--light-grey);
+            border-bottom-color: var(--primary-color);
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #overlay-message {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .file-upload {
+            display: none;
+            /* Hide default input */
+        }
+
+        #file-label {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: var(--medium-grey);
+            color: var(--text-light);
+            border-radius: calc(var(--border-radius) / 1.5);
+            cursor: pointer;
+            transition: background-color var(--transition-speed);
+            font-size: 0.95rem;
+        }
+
+        #file-label:hover {
+            background-color: var(--dark-grey);
+        }
+
+        #file-name {
+            display: inline-block;
+            margin-left: 10px;
+            font-style: italic;
+            color: var(--dark-grey);
+            font-size: 0.9rem;
+        }
+
+        /* Debug Panel Styling */
+        #debug-panel {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 15px;
+            font-family: monospace;
+            font-size: 12px;
+            z-index: 9999;
+            max-width: 450px;
+            max-height: 250px;
+            overflow: auto;
+            border-radius: var(--border-radius);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            display: none;
+            /* Initially hidden */
+        }
+
+        #debug-panel-toggle {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: var(--warning-color);
+            color: var(--text-light);
+            border: none;
+            padding: 8px 12px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 9998;
+            font-size: 1rem;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+        }
+
+        #debug-panel div:first-child {
+            font-weight: bold;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+        }
+
+        #debug-panel button {
+            background-color: var(--primary-color);
+            padding: 5px 10px;
+            font-size: 11px;
+            margin-top: 10px;
+            margin-right: 5px;
+        }
+
+        #debug-panel button:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 15px;
+            margin-top: 30px;
+            background-color: var(--dark-grey);
+            color: var(--light-grey);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Debug Panel Toggle Button -->
+    <button id="debug-panel-toggle" title="Toggle Debug Panel">🐞</button>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel">
+        <div>Debug Info:</div>
+        <div id="debug-info">Loading...</div>
+        <button onclick="clearDebugInfo()">Clear Log</button>
+        <button onclick="toggleDebugPanel(false)">Hide</button>
+    </div>
+
+    <header>
+        <h1><i class="fas fa-users"></i> Crowd Detection System</h1>
+    </header>
+
+    <div class="container">
+        <!-- Alert Banner -->
+        <div class="alert-banner" id="alert-banner">
+            <i class="fas fa-exclamation-triangle"></i> ALERT: Overcrowding threshold exceeded!
+        </div>
+
+        <div class="main-content">
+            <!-- Video Section -->
+            <div class="video-section card">
+                <div class="video-container">
+                    <!-- Placeholder shown when no feed -->
+                    <div id="placeholder-img">
+                        <i class="fas fa-video-slash"></i>
+                        <span>Video feed is inactive.<br>Select source and start detection.</span>
+                    </div>
+                    <!-- Live Webcam Preview (hidden initially) -->
+                    <video id="webcam-preview" autoplay muted playsinline></video>
+                    <!-- Processed Feed Display -->
+                    <img id="video-feed" alt="Processed Video Feed">
+                    <!-- Loading/Status Overlay -->
+                    <div class="video-overlay" id="video-overlay">
+                        <div class="loader"></div>
+                        <p id="overlay-message">Initializing...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls and Stats Section -->
+            <div class="controls-stats-section">
+                <div class="controls card">
+                    <h3><i class="fas fa-cogs"></i> Detection Controls</h3>
+
+                    <div class="button-group">
+                        <button id="start-btn"><i class="fas fa-play"></i> Start</button>
+                        <button id="stop-btn" disabled><i class="fas fa-stop"></i> Stop</button>
+                    </div>
+
+                    <label for="threshold-input">Overcrowding Threshold (People):</label>
+                    <input type="number" id="threshold-input" min="1" value="5">
+                    <button id="update-threshold-btn" disabled><i class="fas fa-sync-alt"></i> Update Threshold</button>
+
+                    <h4><i class="fas fa-video"></i> Video Source</h4>
+                    <select id="video-source">
+                        <option value="webcam" selected>Webcam</option>
+                        <!-- <option value="file">Upload Video File</option> -->
+                        <!-- Uncomment if file upload needed -->
+                    </select>
+
+                    <div id="webcam-container">
+                        <label for="webcam-selector">Select Camera:</label>
+                        <select id="webcam-selector">
+                            <option value="">Loading cameras...</option>
+                        </select>
+                        <button id="test-camera-btn"
+                            style="margin-top: 10px; background-color: var(--warning-dark); font-size: 0.9rem; padding: 8px 12px;"><i
+                                class="fas fa-camera-retro"></i> Test Camera Access</button>
+                    </div>
+
+                    <!-- File Upload Container (Hidden by default) -->
+                    <div id="file-container" style="display: none;">
+                        <input type="file" id="video-file" class="file-upload" accept="video/*">
+                        <label for="video-file" id="file-label"><i class="fas fa-upload"></i> Choose Video File</label>
+                        <span id="file-name">No file chosen</span>
+                    </div>
+                </div>
+
+                <div class="stats card">
+                    <h3><i class="fas fa-chart-bar"></i> Detection Statistics</h3>
+                    <div class="stats-item">
+                        <span class="stats-label">Status:</span>
+                        <span class="stats-value">
+                            <span class="status-indicator status-inactive" id="status-indicator"></span>
+                            <span id="status-text">Not Running</span>
+                        </span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">People Count:</span>
+                        <span class="stats-value" id="people-count">0</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Threshold:</span>
+                        <span class="stats-value" id="threshold-display">5</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Alert Status:</span>
+                        <span class="stats-value">
+                            <span class="status-indicator status-inactive" id="alert-indicator"></span>
+                            <span id="alert-status">No Alert</span>
+                        </span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Processing FPS:</span>
+                        <span class="stats-value" id="fps-display">0</span>
+                    </div>
+                    <div class="stats-item">
+                        <span class="stats-label">Last Update:</span>
+                        <span class="stats-value" id="last-updated">Never</span>
+                    </div>
+                </div>
+            </div> <!-- End Controls and Stats Section -->
+
+        </div> <!-- End Main Content -->
+    </div> <!-- End Container -->
+
+    <footer>
+        Crowd Detection System © 2024 | Powered by Flask & OpenCV
+    </footer>
+
+    <script>
+        // === DOM Elements ===
+        const startBtn = document.getElementById('start-btn');
+        const stopBtn = document.getElementById('stop-btn');
+        const thresholdInput = document.getElementById('threshold-input');
+        const updateThresholdBtn = document.getElementById('update-threshold-btn');
+        const videoFeed = document.getElementById('video-feed');
+        const placeholderImg = document.getElementById('placeholder-img');
+        const statusIndicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const peopleCount = document.getElementById('people-count');
+        const thresholdDisplay = document.getElementById('threshold-display');
+        const alertIndicator = document.getElementById('alert-indicator');
+        const alertStatus = document.getElementById('alert-status');
+        const fpsDisplay = document.getElementById('fps-display');
+        const lastUpdated = document.getElementById('last-updated');
+        const alertBanner = document.getElementById('alert-banner');
+        const videoOverlay = document.getElementById('video-overlay');
+        const overlayMessage = document.getElementById('overlay-message');
+        const videoSource = document.getElementById('video-source');
+        const webcamContainer = document.getElementById('webcam-container');
+        const fileContainer = document.getElementById('file-container');
+        const webcamSelector = document.getElementById('webcam-selector');
+        const webcamPreview = document.getElementById('webcam-preview');
+        const videoFile = document.getElementById('video-file');
+        const fileName = document.getElementById('file-name');
+        const testCameraBtn = document.getElementById('test-camera-btn');
+        const debugPanel = document.getElementById('debug-panel');
+        const debugInfo = document.getElementById('debug-info');
+        const debugToggleBtn = document.getElementById('debug-panel-toggle');
+
+
+        // === API Endpoints ===
+        // Assuming Flask runs on the same host/port or CORS is configured
+        const API_BASE_URL = ''; // Keep empty if same origin
+        const STATUS_ENDPOINT = `${API_BASE_URL}/status`;
+        const START_ENDPOINT = `${API_BASE_URL}/start`;
+        const PROCESS_FRAME_ENDPOINT = `${API_BASE_URL}/process_frame`;
+        const UPDATE_THRESHOLD_ENDPOINT = `${API_BASE_URL}/update_threshold`;
+        const STOP_ENDPOINT = `${API_BASE_URL}/stop`;
+
+        // === App State ===
+        let isDetectionRunning = false;
+        let frameProcessingTimeout = null; // Use timeout instead of interval for better control
+        let selectedCameraId = null;
+        let mediaStream = null;
+        let lastFrameTime = 0;
+        let consecutiveErrors = 0;
+        const frameInterval = 150; // ms between successful frame sends (adjust for performance vs responsiveness)
+        const retryDelayBase = 500; // ms initial delay on error
+        const maxConsecutiveErrors = 8; // Stop after this many consecutive errors
+        const requestTimeout = 7000; // ms for fetch requests
+
+        let debugLog = [];
+        let isDebugVisible = false;
+
+        // === Debugging Functions ===
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        function logToDebug(type, args) {
+            const message = Array.from(args).map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `<span style="color: ${type === 'error' ? '#ff6b6b' : type === 'warn' ? '#ffa500' : '#90ee90'};">[${timestamp} ${type.toUpperCase()}]</span> ${message}`;
+
+            debugLog.push(logEntry);
+            if (debugLog.length > 50) debugLog.shift(); // Keep last 50 messages
+
+            if (debugInfo && isDebugVisible) {
+                debugInfo.innerHTML = debugLog.join('<br>');
+                debugInfo.scrollTop = debugInfo.scrollHeight;
+            }
+        }
+
+        console.log = function () { originalLog.apply(console, arguments); logToDebug('log', arguments); };
+        console.error = function () { originalError.apply(console, arguments); logToDebug('error', arguments); };
+        console.warn = function () { originalWarn.apply(console, arguments); logToDebug('warn', arguments); };
+
+        function clearDebugInfo() {
+            debugLog = [];
+            if (debugInfo) debugInfo.innerHTML = '';
+            console.log("Debug log cleared.");
+        }
+
+        function toggleDebugPanel(show) {
+            isDebugVisible = (show === undefined) ? !isDebugVisible : show;
+            if (debugPanel) {
+                debugPanel.style.display = isDebugVisible ? 'block' : 'none';
+                if (isDebugVisible) { // Refresh content when showing
+                    debugInfo.innerHTML = debugLog.join('<br>');
+                    debugInfo.scrollTop = debugInfo.scrollHeight;
+                }
+            }
+            // Optionally change toggle button appearance
+            debugToggleBtn.textContent = isDebugVisible ? '❌' : '🐞';
+            debugToggleBtn.title = isDebugVisible ? 'Hide Debug Panel' : 'Show Debug Panel';
+        }
+
+        // === Initialization ===
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log("DOM fully loaded and parsed");
+            setupEventListeners();
+            checkDetectionStatus(); // Check status first
+            loadCameras(); // Then load cameras
+            updateUIForStoppedState(); // Ensure UI starts in stopped state
+            toggleDebugPanel(false); // Start with debug hidden
+            debugInfo.innerHTML = 'Debug panel initialized. Waiting for logs...';
+        });
+
+        // === Event Listeners ===
+        function setupEventListeners() {
+            startBtn.addEventListener('click', startDetection);
+            stopBtn.addEventListener('click', stopDetection);
+            updateThresholdBtn.addEventListener('click', updateThreshold);
+            videoSource.addEventListener('change', handleVideoSourceChange);
+            videoFile.addEventListener('change', handleFileSelection);
+            webcamSelector.addEventListener('change', handleCameraSelection);
+            testCameraBtn.addEventListener('click', testCameraAccess);
+            debugToggleBtn.addEventListener('click', () => toggleDebugPanel());
+
+            // Update threshold on Enter key in input
+            thresholdInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !updateThresholdBtn.disabled) {
+                    updateThreshold();
+                }
+            });
+        }
+
+        // === Core Functions ===
+
+        async function checkDetectionStatus() {
+            console.log("Checking initial detection status...");
+            showOverlay("Checking server status...");
+            try {
+                const response = await fetch(STATUS_ENDPOINT);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+
+                console.log("Status check response:", data);
+                if (data.status === 'running') {
+                    console.log("Detection is already running on the server.");
+                    updateUIForRunningState(data.stats);
+                    // Decide if we should automatically start webcam/processing client-side
+                    // For now, we'll require manual start from UI even if server is running
+                    // alert("Detection is already running on the server. You may need to select a camera and click 'Start' again if the video feed isn't showing.");
+                    // Optionally, could try to start frame processing if a camera is selected
+                    // if (selectedCameraId) startFrameProcessing();
+                    hideOverlay(); // Hide overlay after check
+                } else {
+                    console.log("Detection is not running on the server.");
+                    updateUIForStoppedState(data.stats); // Update stats even if stopped
+                    hideOverlay();
+                }
+            } catch (error) {
+                console.error('Error checking detection status:', error);
+                // alert(`Error contacting server: ${error.message}. Please ensure the backend is running.`);
+                updateUIForStoppedState(); // Assume stopped if error
+                showOverlay(`Error connecting to server: ${error.message}`, true); // Show error in overlay
+                // Keep overlay visible for a bit longer on error
+                setTimeout(hideOverlay, 4000);
+            }
+        }
+
+        async function loadCameras() {
+            console.log("Attempting to load cameras...");
+            webcamSelector.innerHTML = '<option value="">Detecting cameras...</option>';
+            webcamSelector.disabled = true;
+
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                console.error("getUserMedia not supported by this browser.");
+                webcamSelector.innerHTML = '<option value="">Webcam access not supported</option>';
+                alert("Your browser does not support camera access (getUserMedia). Try a different browser like Chrome or Firefox.");
+                return;
+            }
+
+            try {
+                // Request permission first (might trigger prompt)
+                console.log("Requesting camera permissions...");
+                const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                console.log("Camera permission granted.");
+
+                // Stop the temporary stream immediately after getting permission
+                tempStream.getTracks().forEach(track => track.stop());
+                console.log("Temporary stream stopped.");
+
+                // Enumerate devices *after* permission is granted
+                console.log("Enumerating video devices...");
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                console.log(`Found ${videoDevices.length} video devices.`);
+
+                webcamSelector.innerHTML = ''; // Clear "Detecting..."
+
+                if (videoDevices.length === 0) {
+                    webcamSelector.innerHTML = '<option value="">No cameras found</option>';
+                    console.warn("No video input devices found after permission grant.");
+                    return;
+                }
+
+                // Add a default "Select" option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = "";
+                defaultOption.text = "-- Select Camera --";
+                webcamSelector.appendChild(defaultOption);
+
+                videoDevices.forEach((device, index) => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    // Use label if available, otherwise provide a generic name
+                    option.text = device.label || `Camera ${index + 1}`;
+                    console.log(`Adding camera: ${option.text} (ID: ${option.value})`);
+                    webcamSelector.appendChild(option);
+                });
+
+                webcamSelector.disabled = false;
+                console.log("Camera list populated.");
+
+            } catch (error) {
+                console.error('Error accessing or enumerating cameras:', error.name, error.message);
+                webcamSelector.innerHTML = '<option value="">Camera access failed</option>';
+                let errorMsg = "Failed to access camera. ";
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMsg += "Permission denied. Please allow camera access in your browser settings.";
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMsg += "No camera detected. Ensure it's connected and enabled.";
+                } else {
+                    errorMsg += `Error: ${error.name}. Check browser console for details.`;
+                }
+                alert(errorMsg);
+            }
+        }
+
+        function handleCameraSelection() {
+            selectedCameraId = webcamSelector.value;
+            console.log(`Camera selected: ID = ${selectedCameraId}`);
+
+            // If detection is already running, stop the current stream and start new one
+            if (isDetectionRunning && selectedCameraId) {
+                console.log("Detection running, restarting webcam with new selection.");
+                stopWebcamStream(); // Stop existing stream first
+                startWebcamStreamAndProcessing(); // Attempt to start new one
+            } else if (selectedCameraId) {
+                // If not running, just start the preview
+                startWebcamPreviewOnly();
+            } else {
+                // No camera selected, stop preview
+                stopWebcamStream();
+                webcamPreview.style.display = 'none';
+            }
+        }
+
+        async function startWebcamPreviewOnly() {
+            if (!selectedCameraId) {
+                console.warn("Cannot start preview, no camera selected.");
+                return false;
+            }
+            if (mediaStream) { // Stop existing stream if any
+                stopWebcamStream();
+            }
+
+            console.log(`Starting preview for camera ID: ${selectedCameraId}`);
+            const constraints = { video: { deviceId: { exact: selectedCameraId } } };
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                webcamPreview.srcObject = mediaStream;
+                webcamPreview.style.display = 'block'; // Show the preview element
+                placeholderImg.classList.add('hidden'); // Hide placeholder
+                console.log("Webcam preview started successfully.");
+                return true;
+            } catch (error) {
+                console.error(`Error starting preview for camera ${selectedCameraId}:`, error.name, error.message);
+                alert(`Failed to start preview for the selected camera. Error: ${error.name}`);
+                webcamPreview.style.display = 'none'; // Hide preview element on error
+                placeholderImg.classList.remove('hidden'); // Show placeholder again
+                return false;
+            }
+        }
+
+
+        function stopWebcamStream() {
+            if (mediaStream) {
+                console.log("Stopping existing webcam stream.");
+                mediaStream.getTracks().forEach(track => {
+                    track.stop();
+                    console.log(`Track stopped: ${track.kind} - ${track.label}`);
+                });
+                mediaStream = null;
+                webcamPreview.srcObject = null; // Clear the srcObject
+            } else {
+                console.log("No active webcam stream to stop.");
+            }
+        }
+
+        function handleVideoSourceChange() {
+            const source = videoSource.value;
+            console.log(`Video source changed to: ${source}`);
+            stopFrameProcessing(); // Stop processing when changing source
+            stopWebcamStream(); // Stop webcam if it was running
+
+            if (source === 'webcam') {
+                webcamContainer.style.display = 'block';
+                fileContainer.style.display = 'none';
+                placeholderImg.classList.remove('hidden'); // Show placeholder initially
+                videoFeed.style.display = 'none'; // Hide processed feed
+                webcamPreview.style.display = 'none'; // Hide preview initially
+                if (selectedCameraId) {
+                    // Optionally restart preview if a camera was already selected
+                    // startWebcamPreviewOnly();
+                }
+            } else { // source === 'file'
+                webcamContainer.style.display = 'none';
+                fileContainer.style.display = 'block';
+                placeholderImg.classList.remove('hidden');
+                videoFeed.style.display = 'none';
+                webcamPreview.style.display = 'none';
+            }
+            // Reset UI elements related to the feed
+            updateUIForStoppedState(); // Go back to stopped state appearance
+        }
+
+        function handleFileSelection(event) {
+            const file = event.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                console.log(`File selected: ${file.name}, Size: ${file.size} bytes, Type: ${file.type}`);
+                // Potentially validate file type here
+                if (!file.type.startsWith('video/')) {
+                    alert("Please select a valid video file (e.g., mp4, webm, avi).");
+                    videoFile.value = ''; // Reset file input
+                    fileName.textContent = 'No file chosen';
+                    return;
+                }
+            } else {
+                fileName.textContent = 'No file chosen';
+            }
+        }
+
+        async function startDetection() {
+            if (isDetectionRunning) {
+                console.warn("Start button clicked, but detection is already running.");
+                return;
+            }
+
+            const source = videoSource.value;
+            if (source === 'webcam' && !selectedCameraId) {
+                alert("Please select a camera before starting detection.");
+                console.error("Start aborted: No camera selected.");
+                return;
+            }
+            // Add similar check for file if implementing file upload
+
+            console.log("Starting detection...");
+            showOverlay('Initializing detection system...');
+            startBtn.disabled = true; // Disable start button immediately
+
+            try {
+                const threshold = parseInt(thresholdInput.value) || 5;
+                if (threshold <= 0) {
+                    alert("Threshold must be a positive number.");
+                    startBtn.disabled = false; // Re-enable start button
+                    hideOverlay();
+                    return;
+                }
+
+                console.log(`Sending start request with threshold: ${threshold}`);
+                const response = await fetch(START_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threshold })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.error(`Failed to start detection on server: ${response.status}`, data.error || 'Unknown error');
+                    throw new Error(data.error || `Server responded with ${response.status}`);
+                }
+
+                console.log("Server confirmed detection start:", data.message);
+                isDetectionRunning = true; // Set running state *after* server confirmation
+                consecutiveErrors = 0; // Reset errors on successful start
+
+                updateUIForRunningState({ threshold: threshold }); // Update UI immediately
+
+                // Start processing based on source
+                if (source === 'webcam') {
+                    startWebcamStreamAndProcessing();
+                } else if (source === 'file') {
+                    // Implement file processing start here if needed
+                    console.warn("File processing not yet implemented.");
+                    alert("Video file processing is not implemented in this version.");
+                    // await stopDetection(); // Stop server if file processing fails/not implemented
+                    hideOverlay();
+                }
+
+                // Don't hide overlay immediately, let frame processing handle it
+                // hideOverlay();
+
+            } catch (error) {
+                console.error('Error starting detection:', error);
+                alert(`Failed to start detection: ${error.message}`);
+                isDetectionRunning = false; // Ensure state is correct on failure
+                updateUIForStoppedState(); // Reset UI
+                hideOverlay();
+                startBtn.disabled = false; // Re-enable start button on failure
+            }
+        }
+
+        async function startWebcamStreamAndProcessing() {
+            if (!selectedCameraId) {
+                console.error("Cannot start stream: No camera selected.");
+                showOverlay("Error: No camera selected.", true);
+                await stopDetection(); // Stop server side if we can't start client side
+                return;
+            }
+
+            showOverlay(`Starting camera: ${webcamSelector.selectedOptions[0].text}...`);
+            stopWebcamStream(); // Ensure any old stream is stopped
+
+            console.log(`Attempting to start stream for device ID: ${selectedCameraId}`);
+            const constraints = { video: { deviceId: { exact: selectedCameraId } } };
+
+            try {
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                console.log("Webcam stream acquired.");
+                webcamPreview.srcObject = mediaStream;
+                webcamPreview.style.display = 'block'; // Show preview video element
+                placeholderImg.classList.add('hidden'); // Hide placeholder
+                videoFeed.style.display = 'block'; // Prepare processed feed display area
+
+                // Wait briefly for the video to potentially stabilize dimensions
+                await new Promise(resolve => setTimeout(resolve, 200));
+
+                if (webcamPreview.videoWidth > 0 && webcamPreview.videoHeight > 0) {
+                    console.log(`Webcam resolution: ${webcamPreview.videoWidth}x${webcamPreview.videoHeight}`);
+                    // Start the frame processing loop
+                    console.log("Starting frame processing loop.");
+                    clearTimeout(frameProcessingTimeout); // Clear any previous timeout just in case
+                    processFrame(); // Start the loop
+                    hideOverlay(); // Hide overlay now that stream seems ready
+                } else {
+                    // This case might happen if the stream starts but dimensions aren't ready immediately
+                    console.warn("Webcam dimensions not available immediately after stream start. Retrying processFrame...");
+                    // Retry starting the processFrame loop after a short delay
+                    frameProcessingTimeout = setTimeout(processFrame, 500);
+                    showOverlay("Waiting for video stream...", false, 2000); // Show temporary message
+                }
+
+            } catch (error) {
+                console.error(`Error starting webcam stream ${selectedCameraId}:`, error.name, error.message);
+                showOverlay(`Error starting camera: ${error.message}`, true);
+                alert(`Failed to start the selected camera. Please check permissions and ensure it's not in use. Error: ${error.name}`);
+                await stopDetection(); // Stop detection if camera fails
+            }
+        }
+
+
+        async function stopDetection() {
+            if (!isDetectionRunning && !detector_instance) { // Check both client and server state possibility
+                console.warn("Stop button clicked, but detection is not running.");
+                // return; // Allow stopping even if client state is somehow wrong, to ensure server stops
+            }
+            console.log("Attempting to stop detection...");
+            showOverlay('Stopping detection...');
+            stopBtn.disabled = true; // Disable stop button immediately
+
+            // 1. Stop client-side processing first
+            stopFrameProcessing();
+            stopWebcamStream();
+
+            // 2. Send stop request to server
+            try {
+                console.log("Sending stop request to server...");
+                const response = await fetch(STOP_ENDPOINT, { method: 'POST' });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    // Log error but proceed with UI cleanup
+                    console.error(`Server error during stop: ${response.status}`, data.error || 'Unknown error');
+                    alert(`Server reported an issue during stop: ${data.message || data.error || response.statusText}`);
+                } else {
+                    console.log("Server confirmed detection stop:", data.message);
+                }
+            } catch (error) {
+                console.error('Error sending stop request to server:', error);
+                alert(`Network error while trying to stop detection: ${error.message}`);
+            } finally {
+                // 3. Update UI regardless of server response (to reflect client stop)
+                isDetectionRunning = false; // Ensure client state is stopped
+                updateUIForStoppedState(); // Reset the UI to stopped appearance
+                hideOverlay(); // Hide the overlay
+                console.log("Detection stopped (client-side).");
+            }
+        }
+
+        async function updateThreshold() {
+            if (!isDetectionRunning) {
+                alert("Detection must be running to update the threshold.");
+                return;
+            }
+
+            const threshold = parseInt(thresholdInput.value);
+            if (isNaN(threshold) || threshold <= 0) {
+                alert("Please enter a valid positive number for the threshold.");
+                return;
+            }
+
+            console.log(`Updating threshold to: ${threshold}`);
+            updateThresholdBtn.disabled = true; // Disable while request is in progress
+
+            try {
+                const response = await fetch(UPDATE_THRESHOLD_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ threshold })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    console.error(`Failed to update threshold: ${response.status}`, data.error || 'Unknown error');
+                    throw new Error(data.error || `Server responded with ${response.status}`);
+                }
+
+                console.log("Server confirmed threshold update:", data.message);
+                thresholdDisplay.textContent = data.new_threshold !== undefined ? data.new_threshold : threshold; // Update display from response if available
+                alert('Threshold updated successfully!');
+
+            } catch (error) {
+                console.error('Error updating threshold:', error);
+                alert(`Failed to update threshold: ${error.message}`);
+                // Optionally revert the display value if the update fails
+                // thresholdDisplay.textContent = currentThresholdValue; // Need to store current value for this
+            } finally {
+                // Re-enable button only if detection is still running
+                if (isDetectionRunning) {
+                    updateThresholdBtn.disabled = false;
+                }
+            }
+        }
+
+        // === Frame Processing Loop ===
+        async function processFrame() {
+            // 1. Check if we should still be running
+            if (!isDetectionRunning) {
+                console.log("processFrame: Detection stopped, exiting loop.");
+                return;
+            }
+
+            // 2. Check webcam readiness
+            const isWebcamReady = webcamPreview &&
+                webcamPreview.srcObject &&
+                webcamPreview.readyState >= 2 && // HAVE_CURRENT_DATA or more
+                webcamPreview.videoWidth > 0 &&
+                webcamPreview.videoHeight > 0;
+
+            if (!isWebcamReady) {
+                console.warn(`processFrame: Webcam not ready (State: ${webcamPreview?.readyState}, Dims: ${webcamPreview?.videoWidth}x${webcamPreview?.videoHeight}). Retrying...`);
+                consecutiveErrors++;
+                if (consecutiveErrors > maxConsecutiveErrors) {
+                    console.error("Too many consecutive webcam errors. Stopping detection.");
+                    alert("Detection stopped due to persistent webcam issues. Please check camera connection/permissions.");
+                    await stopDetection();
+                    return;
+                }
+                // Schedule retry with increasing delay
+                const delay = Math.min(retryDelayBase * Math.pow(2, consecutiveErrors - 1), 5000);
+                frameProcessingTimeout = setTimeout(processFrame, delay);
+                return;
+            }
+
+            // Reset error count if webcam is now ready
+            if (consecutiveErrors > 0) {
+                console.log("Webcam became ready.");
+                consecutiveErrors = 0;
+            }
+
+            // 3. Capture frame data
+            let frameData;
+            try {
+                const canvas = document.createElement('canvas');
+                // --- Adjust canvas size for performance ---
+                // Option 1: Fixed small size (faster processing, lower quality feed)
+                // canvas.width = 480;
+                // canvas.height = 360;
+                // Option 2: Scale based on preview size (maintains aspect ratio)
+                const scaleFactor = 0.6; // Send smaller frames to backend (e.g., 60%)
+                canvas.width = webcamPreview.videoWidth * scaleFactor;
+                canvas.height = webcamPreview.videoHeight * scaleFactor;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(webcamPreview, 0, 0, canvas.width, canvas.height);
+                // Use lower quality JPEG for faster transfer
+                frameData = canvas.toDataURL('image/jpeg', 0.6); // Quality 0.6 (60%)
+
+                // Basic check for valid data URI
+                if (!frameData || frameData.length < 100 || !frameData.startsWith('data:image/jpeg;base64,')) {
+                    throw new Error("Invalid frame data generated from canvas");
+                }
+            } catch (canvasError) {
+                console.error("Error capturing frame from webcam:", canvasError);
+                consecutiveErrors++;
+                // Handle this error similar to webcam readiness error
+                if (consecutiveErrors > maxConsecutiveErrors) {
+                    console.error("Too many consecutive canvas errors. Stopping detection.");
+                    alert("Detection stopped due to errors capturing video frames.");
+                    await stopDetection();
+                    return;
+                }
+                const delay = Math.min(retryDelayBase * Math.pow(2, consecutiveErrors - 1), 5000);
+                frameProcessingTimeout = setTimeout(processFrame, delay);
+                return;
+            }
+
+            // 4. Send frame to backend
+            const controller = new AbortController();
+            const fetchTimeoutId = setTimeout(() => {
+                console.warn(`Fetch request to ${PROCESS_FRAME_ENDPOINT} timed out after ${requestTimeout}ms.`);
+                controller.abort();
+            }, requestTimeout);
+
+            try {
+                const response = await fetch(PROCESS_FRAME_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ frame: frameData }),
+                    signal: controller.signal
+                });
+
+                clearTimeout(fetchTimeoutId); // Clear timeout if fetch completed
+
+                if (!response.ok) {
+                    // Handle non-200 responses
+                    let errorMsg = `Server error: ${response.status} ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.error || errorMsg;
+                        console.error("Backend error details:", errorData);
+                    } catch (parseError) {
+                        console.warn("Could not parse error response body.");
+                    }
+                    throw new Error(errorMsg); // Throw to enter catch block
+                }
+
+                // Process successful response
+                const data = await response.json();
+                if (data && data.processed_frame && data.stats) {
+                    updateFrameDisplay(data.processed_frame);
+                    updateStats(data.stats);
+                    lastFrameTime = Date.now();
+                    consecutiveErrors = 0; // Reset error count on success
+                } else {
+                    console.error("Invalid success response structure from backend:", data);
+                    throw new Error("Received invalid data structure from server."); // Treat as error
+                }
+
+            } catch (error) {
+                console.error(`Frame processing fetch error:`, error.name === 'AbortError' ? 'Request timed out' : error.message);
+                consecutiveErrors++;
+                if (consecutiveErrors > maxConsecutiveErrors) {
+                    console.error("Too many consecutive processing errors. Stopping detection.");
+                    alert("Detection stopped due to repeated errors processing frames or communicating with the server. Check console.");
+                    await stopDetection();
+                    return;
+                }
+                // Allow loop to continue with delay in finally block
+            } finally {
+                // 5. Schedule next frame processing attempt if still running
+                if (isDetectionRunning) {
+                    // Use adaptive delay: base interval on success, longer delay on error
+                    const delay = (consecutiveErrors > 0)
+                        ? Math.min(retryDelayBase * Math.pow(2, consecutiveErrors - 1), 5000)
+                        : frameInterval;
+                    // console.log(`Scheduling next frame processing in ${delay}ms`);
+                    clearTimeout(frameProcessingTimeout); // Ensure no duplicate timeouts
+                    frameProcessingTimeout = setTimeout(processFrame, delay);
+                }
+            }
+        }
+
+        function stopFrameProcessing() {
+            console.log("Stopping frame processing loop.");
+            clearTimeout(frameProcessingTimeout); // Clear any pending frame processing
+            frameProcessingTimeout = null;
+            // isDetectionRunning should be set to false by stopDetection()
+        }
+
+        // === UI Update Functions ===
+
+        function updateFrameDisplay(frameData) {
+            if (frameData && videoFeed.style.display !== 'none') { // Only update if feed should be visible
+                videoFeed.src = frameData;
+                // Placeholder should already be hidden if we get frame data
+                // placeholderImg.classList.add('hidden');
+            } else if (!isDetectionRunning) {
+                // If stopped, ensure placeholder is shown and feed hidden
+                videoFeed.src = ''; // Clear src to potentially free memory
+                videoFeed.style.display = 'none';
+                placeholderImg.classList.remove('hidden');
+            }
+            // If running but frameData is null/empty, maybe show a temporary issue message?
+        }
+
+        function updateStats(stats) {
+            if (!stats) {
+                console.warn("updateStats called with null or undefined stats.");
+                return;
+            }
+
+            peopleCount.textContent = stats.people_count ?? 'N/A';
+            thresholdDisplay.textContent = stats.threshold ?? 'N/A';
+            fpsDisplay.textContent = stats.fps ?? 'N/A';
+
+            // Update alert status and banner
+            const alertActive = stats.alert === true;
+            alertIndicator.className = `status-indicator ${alertActive ? 'status-alert' : 'status-inactive'}`;
+            alertStatus.textContent = alertActive ? 'ACTIVE' : 'Inactive';
+
+            if (alertActive) {
+                alertBanner.classList.add('visible', 'alert-flash');
+            } else {
+                alertBanner.classList.remove('visible', 'alert-flash');
+            }
+
+            // Update last updated time
+            if (stats.last_updated) {
+                try {
+                    const date = new Date(stats.last_updated * 1000);
+                    lastUpdated.textContent = date.toLocaleTimeString();
+                } catch (e) {
+                    console.error("Error parsing last_updated timestamp:", e);
+                    lastUpdated.textContent = "Invalid Date";
+                }
+            } else {
+                lastUpdated.textContent = isDetectionRunning ? "Waiting..." : "Never";
+            }
+
+            // Update overall status text and indicator based on isDetectionRunning state
+            statusIndicator.className = `status-indicator ${isDetectionRunning ? 'status-active' : 'status-inactive'}`;
+            statusText.textContent = isDetectionRunning ? 'Running' : 'Not Running';
+        }
+
+        function updateUIForRunningState(initialStats) {
+            console.log("Updating UI to: Running State");
+            isDetectionRunning = true;
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            updateThresholdBtn.disabled = false;
+            videoSource.disabled = true; // Prevent changing source while running
+            webcamSelector.disabled = true; // Prevent changing camera while running
+            // fileInput related disables if implemented
+
+            statusIndicator.className = 'status-indicator status-active';
+            statusText.textContent = 'Running';
+
+            // Clear feed initially, processFrame will update it
+            videoFeed.src = '';
+            videoFeed.style.display = 'block'; // Show the img element
+            placeholderImg.classList.add('hidden'); // Hide placeholder
+
+            if (initialStats) {
+                updateStats(initialStats);
+            } else {
+                // Reset stats display if no initial stats provided
+                peopleCount.textContent = '0';
+                // thresholdDisplay text content updated by startDetection
+                fpsDisplay.textContent = '0';
+                alertIndicator.className = 'status-indicator status-inactive';
+                alertStatus.textContent = 'Inactive';
+                lastUpdated.textContent = 'Starting...';
+                alertBanner.classList.remove('visible', 'alert-flash');
+            }
+        }
+
+        function updateUIForStoppedState(stats) {
+            console.log("Updating UI to: Stopped State");
+            isDetectionRunning = false;
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            updateThresholdBtn.disabled = true;
+            videoSource.disabled = false; // Allow changing source when stopped
+            webcamSelector.disabled = false; // Allow changing camera when stopped
+            // fileInput related enables if implemented
+
+            statusIndicator.className = 'status-indicator status-inactive';
+            statusText.textContent = 'Not Running';
+
+            // Clear and hide video feed, show placeholder
+            videoFeed.src = '';
+            videoFeed.style.display = 'none';
+            webcamPreview.style.display = 'none'; // Also hide preview if webcam was source
+            placeholderImg.classList.remove('hidden');
+
+            // Reset or update stats display based on provided stats (from status check or stop)
+            const defaultStats = { people_count: 0, threshold: thresholdInput.value || 5, alert: false, fps: 0, last_updated: null };
+            const displayStats = stats || defaultStats;
+            updateStats(displayStats); // Use updateStats to reset display elements
+            alertBanner.classList.remove('visible', 'alert-flash'); // Ensure banner is hidden
+        }
+
+        function showOverlay(message, isError = false, autoHideDelay = 0) {
+            console.log(`Overlay: ${message}`);
+            overlayMessage.textContent = message;
+            videoOverlay.classList.add('active');
+            // Optional: Change overlay style for errors
+            if (isError) {
+                videoOverlay.style.backgroundColor = 'rgba(192, 57, 43, 0.85)'; // Reddish overlay
+                // Ensure loader is hidden if it's an error message without loading state
+                // document.querySelector('#video-overlay .loader').style.display = 'none';
+            } else {
+                videoOverlay.style.backgroundColor = 'rgba(44, 62, 80, 0.85)'; // Default dark overlay
+                // document.querySelector('#video-overlay .loader').style.display = 'inline-block';
+            }
+
+            if (autoHideDelay > 0) {
+                setTimeout(hideOverlay, autoHideDelay);
+            }
+        }
+
+        function hideOverlay() {
+            // console.log("Hiding overlay");
+            videoOverlay.classList.remove('active');
+        }
+
+        // === Camera Test Function ===
+        async function testCameraAccess() {
+            console.log("Testing camera access...");
+            showOverlay("Testing camera access...");
+            const testVideo = document.createElement('video');
+            testVideo.autoplay = true;
+            testVideo.muted = true;
+            testVideo.style.position = 'fixed';
+            testVideo.style.top = '10px';
+            testVideo.style.left = '10px';
+            testVideo.style.width = '160px';
+            testVideo.style.height = '120px';
+            testVideo.style.border = '2px solid green';
+            testVideo.style.zIndex = '10000';
+            testVideo.style.display = 'none'; // Hide initially
+            document.body.appendChild(testVideo);
+
+            let stream = null;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                console.log("Camera access successful in test.");
+                testVideo.srcObject = stream;
+                testVideo.style.display = 'block'; // Show the video feed
+
+                showOverlay("Camera test successful! Feed shown top-left.", false, 4000); // Auto-hide after 4s
+
+                // Optional: Enumerate devices again here if needed
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoDevices = devices.filter(d => d.kind === 'videoinput');
+                console.log("Available video devices during test:", videoDevices.map(d => d.label || `ID: ${d.deviceId.substring(0, 8)}...`));
+
+
+                // Clean up after a few seconds
+                setTimeout(() => {
+                    if (stream) stream.getTracks().forEach(track => track.stop());
+                    if (testVideo && testVideo.parentNode) {
+                        testVideo.parentNode.removeChild(testVideo);
+                    }
+                    console.log("Camera test cleanup complete.");
+                }, 4000);
+
+            } catch (error) {
+                console.error("Camera access test failed:", error.name, error.message);
+                let errorMsg = `Camera Test Failed: ${error.name}. `;
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    errorMsg += "Permission was denied.";
+                } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+                    errorMsg += "No camera found.";
+                } else {
+                    errorMsg += "See console for details.";
+                }
+                alert(errorMsg);
+                showOverlay(errorMsg, true, 5000); // Show error in overlay
+
+                // Clean up immediately on error
+                if (stream) stream.getTracks().forEach(track => track.stop());
+                if (testVideo && testVideo.parentNode) {
+                    testVideo.parentNode.removeChild(testVideo);
+                }
+            }
+        }
+
+    </script>
+</body>
+
+</html>
